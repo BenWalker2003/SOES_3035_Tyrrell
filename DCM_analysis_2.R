@@ -50,15 +50,31 @@ argo4 <- argo3 %>%
   filter(n() >= 20) %>%
   ungroup()
 
+# only keep profiles with max PAR in the upper 2m
+# find the row with the maximum PAR for each profile
+df_max_PAR <- argo4 %>%
+  group_by(profile_number) %>%
+  filter(DOWNWELLING_PAR == max(DOWNWELLING_PAR)) %>%
+  ungroup()
+
+# find profiles where the depth of the row with the maximum PAR is > 2 meters
+profiles_to_remove <- df_max_PAR %>%
+  filter(PRES > 2) %>%
+  pull(profile_number)
+
+# filter the data to remove the profile if max PAR is below 2m
+argo5 <- argo4 %>%
+  filter(!(profile_number %in% profiles_to_remove))
+
 # selecting the row with maximum chlorophyll (DCM)
-dcm1 <- argo3 %>% 
+dcm1 <- argo5 %>% 
   group_by(float_num, CYCLE_NUMBER) %>%
   slice_max(CHLA, with_ties = FALSE)
 
 # remove rows with NAN values for median chlorophyll (no measurements <15m)
 dcm2 <- dcm1 %>% drop_na(med_CHLA_15)
 
-# remove rows where max CHLA is in the upper 50m or below 250m
+# remove rows where max CHLA is in the upper 50m or below the 4.63 light level
 dcm3 <- dcm2 %>%
   filter(PRES >= 50 & DOWNWELLING_PAR > 4.63)
 # only keep rows where max CHLA is at least 2x larger than the upper 15m median
@@ -102,4 +118,3 @@ ggplot(data = dcm, aes(CHLA, PRES)) + theme_bw() + geom_point() + scale_y_revers
 #### stop! ####
 # this will take a while
 ggplot(data = argo3, aes(DOWNWELLING_PAR, CHLA)) + theme_bw() + geom_point()
-
