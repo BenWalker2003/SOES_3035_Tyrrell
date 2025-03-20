@@ -18,13 +18,13 @@ argo2 <- NAG %>%
 argo2 <- argo2 %>%
   filter(PRES < 250)
 
-# split TIME into separate date and time fields
+# split new_time into separate date and time fields
 argo2 <- argo2 %>%
-  separate(TIME, sep = " ", into = c("DATE", "TIME"))
+  separate(new_time, sep = " ", into = c("DATE", "NEW_TIME"))
 
-# split TIME into hours, minutes and seconds
+# split NEW_TIME into hours, minutes and seconds
 argo2 <- argo2 %>%
-  separate(TIME, sep = ":", into = c("Hours", "Minutes", "Seconds")) %>%
+  separate(NEW_TIME, sep = ":", into = c("Hours", "Minutes", "Seconds")) %>%
 # change these columns into numeric vectors
   mutate_at(c("Hours", "Minutes", "Seconds"), as.numeric)
 
@@ -102,3 +102,4 @@ ggplot(data = dcm, aes(CHLA, PRES)) + theme_bw() + geom_point() + scale_y_revers
 #### stop! ####
 # this will take a while
 ggplot(data = argo3, aes(DOWNWELLING_PAR, CHLA)) + theme_bw() + geom_point()
+
