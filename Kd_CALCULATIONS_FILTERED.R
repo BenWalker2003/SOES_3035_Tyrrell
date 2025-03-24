@@ -153,7 +153,7 @@ ggsave("plot_correlation_chla.png", plot_correlation_chla, width = 10, height = 
 ##########################################
 plot_correlation_backscatter <- ggplot(cleaned_profile_summary, aes(x = Backscatter, y = Kd_profile, color = Season)) +
   geom_point() +
-  scale_x_continuous(limits = c(0, 0.015)) + 
+  scale_x_continuous(limits = c(0, 0.01)) + 
   scale_y_continuous(limits = c(0, max(cleaned_profile_summary$Kd_profile, na.rm = TRUE))) +
   labs(title = "Relationship Between BBP700 and Kd",
        x = "BBP700 (m⁻¹)",
