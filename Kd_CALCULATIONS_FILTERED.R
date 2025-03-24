@@ -63,7 +63,7 @@ cleaned_data <- data %>%
 
 profile_summary <- cleaned_data %>%
   group_by(profile_number, Region, Season) %>%
-  summarise(
+  reframe(
     surface_PAR = DOWNWELLING_PAR[which.min(PRES)],  
     deep_PAR = DOWNWELLING_PAR[which.max(PRES)],   
     surface_depth = min(PRES),                    
@@ -72,8 +72,7 @@ profile_summary <- cleaned_data %>%
                         - (log(deep_PAR) - log(surface_PAR)) / (deep_depth - surface_depth), NA),  # Light attenuation coefficient
     avg_CHLA = mean(CHLA, na.rm = TRUE),           
     Backscatter = mean(BBP700, na.rm = TRUE)  
-  ) %>%
-  ungroup()
+  )
 
 filtered_profile_summary <- profile_summary %>%
   filter(Kd_profile <= 0.3)
