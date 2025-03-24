@@ -12,6 +12,10 @@ data <- NAG
 
 data$new_time <- ymd_hms(data$new_time)
 
+# Filter Time
+data <- data %>%
+  filter(hour(new_time) >= 10 & hour(new_time) <= 15)
+
 # Assign Seasons based on new_time
 data <- data %>%
   mutate(Season = case_when(
