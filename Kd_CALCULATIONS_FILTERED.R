@@ -16,18 +16,37 @@ data$new_time <- ymd_hms(data$new_time)
 data <- data %>%
   filter(hour(new_time) >= 10 & hour(new_time) <= 15)
 
-# Assign Seasons based on new_time
+
+# Assign Seasons based on new_time and hemispheres
 data <- data %>%
   mutate(Season = case_when(
-    (month(new_time) == 11 & day(new_time) >= 6) | (month(new_time) == 12) |
-      (month(new_time) == 1 & day(new_time) <= 26) ~ "Winter",
-    (month(new_time) == 1 & day(new_time) >= 27) | (month(new_time) == 2) |
-      (month(new_time) == 3) | (month(new_time) == 4) |
-      (month(new_time) == 5 & day(new_time) <= 15) ~ "Spring",
-    (month(new_time) == 5 & day(new_time) >= 16) | (month(new_time) == 6) |
-      (month(new_time) == 7) | (month(new_time) == 8 & day(new_time) <= 15) ~ "Summer",
-    (month(new_time) == 8 & day(new_time) >= 16) | (month(new_time) == 9) |
-      (month(new_time) == 10) | (month(new_time) == 11 & day(new_time) <= 5) ~ "Autumn"
+    # Northern Hemisphere
+    (LATITUDE >= 0 & (
+      (month(new_time) == 11 & day(new_time) >= 7) | (month(new_time) == 12) |
+        (month(new_time) == 1) | (month(new_time) == 2 & day(new_time) <= 3))) ~ "Winter",
+    (LATITUDE >= 0 & (
+      (month(new_time) == 2 & day(new_time) >= 4) | (month(new_time) == 3) |
+        (month(new_time) == 4) | (month(new_time) == 5 & day(new_time) <= 7))) ~ "Spring",
+    (LATITUDE >= 0 & (
+      (month(new_time) == 5 & day(new_time) >= 8) | (month(new_time) == 6) |
+        (month(new_time) == 7) | (month(new_time) == 8 & day(new_time) <= 8))) ~ "Summer",
+    (LATITUDE >= 0 & (
+      (month(new_time) == 8 & day(new_time) >= 9) | (month(new_time) == 9) |
+        (month(new_time) == 10) | (month(new_time) == 11 & day(new_time) <= 6))) ~ "Autumn",
+    
+    # Southern Hemisphere
+    (LATITUDE < 0 & (
+      (month(new_time) == 11 & day(new_time) >= 7) | (month(new_time) == 12) |
+        (month(new_time) == 1) | (month(new_time) == 2 & day(new_time) <= 3))) ~ "Summer",
+    (LATITUDE < 0 & (
+      (month(new_time) == 2 & day(new_time) >= 4) | (month(new_time) == 3) |
+        (month(new_time) == 4) | (month(new_time) == 5 & day(new_time) <= 7))) ~ "Autumn",
+    (LATITUDE < 0 & (
+      (month(new_time) == 5 & day(new_time) >= 8) | (month(new_time) == 6) |
+        (month(new_time) == 7) | (month(new_time) == 8 & day(new_time) <= 8))) ~ "Winter",
+    (LATITUDE < 0 & (
+      (month(new_time) == 8 & day(new_time) >= 9) | (month(new_time) == 9) |
+        (month(new_time) == 10) | (month(new_time) == 11 & day(new_time) <= 6))) ~ "Spring"
   ))
 
 # Define regions
