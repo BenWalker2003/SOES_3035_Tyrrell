@@ -8,14 +8,14 @@ load("Atlantic_Gyres.RData")
 
 # filtering data so that only quality control 1, 2, 5 and 8 are included
 # for pressure, chlorophyll a and downwelling irradiance
-argo2 <- NAG %>%
+argo <- NAG %>%
   filter((PRES_QC == 1 | PRES_QC == 2 | PRES_QC == 5 | PRES_QC == 8) &
            (CHLA_QC == 1 | CHLA_QC == 2 | CHLA_QC == 5 | CHLA_QC == 8) &
            (DOWNWELLING_PAR_QC == 1 | DOWNWELLING_PAR_QC == 2 |
               DOWNWELLING_PAR_QC == 5 | DOWNWELLING_PAR_QC == 8))
 
 # removing data below 250m, too deep for phytoplankton
-argo2 <- argo2 %>%
+argo2 <- argo %>%
   filter(PRES < 250)
 
 # split new_time into separate date and time fields
@@ -35,24 +35,34 @@ argo3 <- argo2 %>%
 # adding a column for maximum downwelling PAR (in theory surface irradiance)
 # for each cycle of each float
 argo3 <- argo3 %>%
-  group_by(float_num, CYCLE_NUMBER) %>%
+  group_by(profile_number) %>%
   mutate(maxPAR = max(as.numeric(DOWNWELLING_PAR)))
 
 # add the median chlorophyll for depth <= 15m in each profile
 argo3 <- argo3 %>%
-  group_by(float_num, CYCLE_NUMBER) %>%
+  group_by(profile_number) %>%
   mutate(med_CHLA_15 = median(CHLA[PRES <= 15], na.rm = TRUE)) %>%
   ungroup()
 
-# only keep profiles with at least 20 measurements
+# only keep profiles with a range of depths >= 150m
 argo4 <- argo3 %>%
-  group_by(float_num, CYCLE_NUMBER) %>%
-  filter(n() >= 20) %>%
+  group_by(profile_number) %>%
+  filter(max(PRES) - min(PRES) >= 150) %>%
   ungroup()
 
-# only keep profiles with max PAR in the upper 2m
+# only keep profiles with gaps of <= 10m between measurements (in upper 180m)
+argo5 <- argo4 %>%
+  group_by(profile_number) %>%
+  mutate(
+    diff_PRES = c(NA, diff(PRES)),  # Calculate difference between successive PRES values
+    # Create a condition to only check gaps when PRES < 180
+    gap_condition = ifelse(PRES < 180, diff_PRES <= 10, TRUE) 
+  ) %>%
+  filter(is.na(diff_PRES) | gap_condition) %>%
+  ungroup()
+
 # find the row with the maximum PAR for each profile
-df_max_PAR <- argo4 %>%
+df_max_PAR <- argo5 %>%
   group_by(profile_number) %>%
   filter(DOWNWELLING_PAR == max(DOWNWELLING_PAR)) %>%
   ungroup()
@@ -63,12 +73,12 @@ profiles_to_remove <- df_max_PAR %>%
   pull(profile_number)
 
 # filter the data to remove the profile if max PAR is below 2m
-argo5 <- argo4 %>%
+argo6 <- argo5 %>%
   filter(!(profile_number %in% profiles_to_remove))
 
 # selecting the row with maximum chlorophyll (DCM)
-dcm1 <- argo5 %>% 
-  group_by(float_num, CYCLE_NUMBER) %>%
+dcm1 <- argo6 %>% 
+  group_by(profile_number) %>%
   slice_max(CHLA, with_ties = FALSE)
 
 # remove rows with NAN values for median chlorophyll (no measurements <15m)
@@ -81,11 +91,13 @@ dcm3 <- dcm2 %>%
 dcm <- dcm3 %>%
   filter(CHLA >= 2*(med_CHLA_15))
 
+# save data
+save(dcm, argo6, file = "argo.RData")
+
 #### graphs ####
 
 # surface PAR and depth of DCM
-g1 <- ggplot(data = dcm, aes(maxPAR, PRES, colour = CHLA)) + theme_bw() + geom_point() +
-  scale_y_reverse()
+g1 <- ggplot(data = dcm, aes(maxPAR, PRES, colour = CHLA)) + theme_bw() + geom_point()
 g1 + scale_colour_continuous(type = "viridis") +
   xlab("Surface PAR / μmol photons" ~ m^-2 ~ s^-1) + ylab("DCM Depth / m")
 
