@@ -1,0 +1,111 @@
+setwd("~/Holly/University/Year 3/Oceanography Research Training/Group Project")
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(paletteer)
+load("argo.RData")
+
+unlink("C:/Users/holly/AppData/Local/R/win-library/4.2/00LOCK")
+options("install.lock" = FALSE)
+install.packages("paletteer")
+
+#### sorting out seasons ####
+
+# split date into year, month and day
+dcm <- dcm %>%
+  separate(DATE, sep = "-", into = c("Year", "Month", "Day")) %>%
+  # change these columns into numeric vectors
+  mutate_at(c("Year", "Month", "Day"), as.numeric)
+
+# add column for astronomical season
+dcm <- dcm %>%
+  mutate(
+    Season = case_when(
+      LATITUDE > 0 ~ case_when(
+        Month %in% c(12, 1) | (Month == 11 & Day >= 7) | (Month == 2 & Day <= 3)
+        ~ "Winter",
+        Month %in% c(3, 4) | (Month == 2 & Day >= 4) | (Month == 5 & Day <= 7)
+        ~ "Spring",
+        Month %in% c(6, 7) | (Month == 5 & Day >= 8) | (Month == 8 & Day <= 8)
+        ~ "Summer",
+        Month %in% c(9, 10) | (Month == 8 & Day >= 9) | (Month == 11 & Day <= 6)
+        ~ "Autumn"
+      ),
+      LATITUDE < 0 ~ case_when(
+        Month %in% c(12, 1) | (Month == 11 & Day >= 7) | (Month == 2 & Day <= 3)
+        ~ "Summer",
+        Month %in% c(3, 4) | (Month == 2 & Day >= 4) | (Month == 5 & Day <= 7)
+        ~ "Autumn",
+        Month %in% c(6, 7) | (Month == 5 & Day >= 8) | (Month == 8 & Day <= 8)
+        ~ "Winter",
+        Month %in% c(9, 10) | (Month == 8 & Day >= 9) | (Month == 11 & Day <= 6)
+        ~ "Spring"
+      ),
+      TRUE ~ "Unknown"
+    )
+  )
+
+# add column for region as well
+dcm <- dcm %>%
+  mutate(Region = case_when(LATITUDE > 40 & LATITUDE <= 66 ~ 'NASP',
+                            LATITUDE > 15 & LATITUDE <= 40 ~ 'NAST',
+                            LATITUDE >= -40 & LATITUDE < -15 ~ 'SAST')
+  )
+
+# make separate data frames for each season
+Winter_subset <- dcm %>%
+  filter(Season == "Winter")
+Spring_subset <- dcm %>%
+  filter(Season == "Spring")
+Summer_subset <- dcm %>%
+  filter(Season == "Summer")
+Autumn_subset <- dcm %>%
+  filter(Season == "Autumn")
+
+#### graphs and analysis ####
+
+# first reorder the seasons
+dcm$Season <- factor(dcm$Season , levels=c("Winter", "Spring", "Summer", "Autumn"))
+
+# graph with season shown by colour
+g1 <- ggplot(data = dcm, aes(maxPAR, PRES, colour = Season, shape = Season)) +
+  theme_bw() + geom_point() +
+  scale_colour_manual(values = c("#476F84", "#A4BED5", "#72874E", "#FED789")) +
+  scale_shape_manual(values=c(18, 16, 17, 15)) +
+  xlab("Surface PAR / μmol photons" ~ m^-2 ~ s^-1) + ylab("DCM Depth / m")
+g1
+
+# test correlation for different seasons
+cor(Winter_subset$maxPAR, Winter_subset$PRES, method = "pearson")
+cor(Spring_subset$maxPAR, Spring_subset$PRES, method = "pearson")
+cor(Summer_subset$maxPAR, Summer_subset$PRES, method = "pearson")
+cor(Autumn_subset$maxPAR, Autumn_subset$PRES, method = "pearson")
+# strongest correlation is in autumn
+
+# remove winter (no correlation) and do correlation test again
+noWinter <- dcm %>%
+  filter(!(Season == "Winter"))
+cor(noWinter$maxPAR, noWinter$PRES, method = "pearson")
+
+# graph without winter
+g2 <- ggplot(data = noWinter, aes(maxPAR, PRES, colour = Season, shape = Season)) +
+  theme_bw() + geom_point() +
+  scale_colour_manual(values = c("#A4BED5", "#72874E", "#FED789")) +
+  scale_shape_manual(values=c(16, 17, 15)) +
+  xlab("Surface PAR / μmol photons" ~ m^-2 ~ s^-1) + ylab("DCM Depth / m") +
+  geom_smooth(method = "lm", se = FALSE)
+g2
+
+# DCM depth by season box plot
+ggplot(dcm, aes(x = Season, y = PRES, fill = Season)) + geom_boxplot() +
+  scale_fill_manual(values = c("#476F84", "#A4BED5", "#72874E", "#FED789")) +
+  theme_bw() + scale_y_reverse() + ylab("DCM Depth / m")
+
+# DCM depth by season and region
+# only 17 profiles in the subpolar gyre, so just remove them
+subtropic <- dcm %>%
+  filter(!(Region == "NASP"))
+ggplot(subtropic, aes(x = Season, y = PRES, fill = Region)) + geom_boxplot() +
+  scale_fill_manual(values = c("#476F84", "#A4BED5")) +
+  theme_bw() + scale_y_reverse() + ylab("DCM Depth / m")
+# winter DCM is deeper in the South Atlantic than the North Atlantic
