@@ -28,9 +28,9 @@ argo2 <- argo2 %>%
 # change these columns into numeric vectors
   mutate_at(c("Hours", "Minutes", "Seconds"), as.numeric)
 
-# filter for times between 10:00 and 15:00
+# filter for times between 10:00 and 14:00
 argo3 <- argo2 %>%
-  filter(Hours >= 10 & Hours < 15)
+  filter(Hours >= 10 & Hours < 14)
 
 # adding a column for maximum downwelling PAR (in theory surface irradiance)
 # for each cycle of each float
