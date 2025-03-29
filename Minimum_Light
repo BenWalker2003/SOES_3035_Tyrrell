@@ -1,0 +1,72 @@
+setwd("~/Holly/University/Year 3/Oceanography Research Training/Group Project")
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+
+load("argo.RData")
+
+# install aspace package for trigonometric functions
+# means we won't have to convert everything to radians
+library(aspace)
+
+# extract profile numbers to use from the DCM data frame
+dcm_profiles <- dcm %>%
+  pull(profile_number)
+
+# filter the data to only include DCM profiles
+light <- argo6 %>%
+  filter((profile_number %in% dcm_profiles))
+
+#### calculating the daily integrated irradiance Qs ####
+
+# converting calendar date to day of year (1 to 365)
+light <- light %>%
+  mutate(DAY = yday(DATE))
+# for equation, needs to be 0 to 354
+light <- light %>%
+  mutate(DAY = DAY - 1)
+
+# convert day of year to an angle
+light <- light %>%
+  mutate(PSI = 360*(DAY/365))
+
+# calculate solar declination
+light <- light %>%
+  mutate(DELTA = 0.39637 - 22.9133*cos_d(PSI) + 4.02543*sin_d(PSI) -
+           0.3872*cos_d(2*PSI) + 0.052*sin_d(2*PSI))
+
+# calculate day length in hours based on solar declination and latitude
+light <- light %>%
+  mutate(DAYLEN = 0.133*acos_d(-tan_d(LATITUDE)*tan_d(DELTA)))
+
+# convert day length into seconds
+light <- light %>%
+  mutate(N = DAYLEN*60*60)
+
+# calculate daily irradiance using day length and downwelling PAR
+# and convert from micro-moles to moles
+light <- light %>%
+  mutate(Qs = (2*N*DOWNWELLING_PAR)/pi,
+         Qs = Qs/1000000)
+
+#### find the compensation depth and irradiance in each profile ####
+
+# make a column for max chl and then 50% chl in each profile
+limit1 <- light %>%
+  group_by(profile_number) %>%
+  mutate(maxCHL = (max(CHLA)),
+         halfCHL = 0.5*maxCHL)
+
+# remove all rows where chl is less than half of that in DCM
+limit2 <- limit1 %>%
+  group_by(profile_number) %>%
+  filter(!(CHLA < halfCHL))
+
+# then keep only the deepest remaining row from each profile
+limit3 <- limit2 %>% 
+  group_by(profile_number) %>%
+  slice_max(PRES, with_ties = FALSE)
+
+# calculate mean compensation irradiance
+print(mean(limit3$Qs))
