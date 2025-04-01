@@ -27,6 +27,9 @@ NAG <- NAG %>%
   filter(n() >= 20) %>%
   ungroup()
 
+# values above 250 m
+NAG <- filter(NAG, PRES <= 250)
+
 # subset for simplicity - remove if wish to retain whole dataset
   # run: 'data <- NAG' instead
 data <- select(NAG,
@@ -94,6 +97,6 @@ light_data2 <- light_data %>%
          SD2 = 2*sd(lm(log(DOWNWELLING_PAR) ~ poly(PRES, 4, raw = TRUE))$residuals), # ±2 times the standard deviation of residuals
          outs = ifelse(abs(resid)>SD2, 1, 0)) # identification of points ±2 times the standard deviation of residuals away from mean of residuals
 
-light_data2 <- filter(light_data2, outs == 0)
-
 # ^^ supposed variability induced by wave focusing at surface and minor clouds not identified by the first polynomial fit.
+
+final_data <- filter(light_data2, outs == 0)
