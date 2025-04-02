@@ -6,8 +6,9 @@ library(ggplot2)
 library(lubridate)
 library(aspace)
 library(cowplot)
+library(plotrix)
 
-load("argo.RData")
+load("cloud_data_dcm.RData")
 
 #### daily integrated irradiance (Qs) ####
 
@@ -44,13 +45,15 @@ dcm <- dcm %>%
          Qs_DCM = Qs_DCM/1000000)
 
 # pearson correlation
-cor(dcm$Qs, dcm$PRES, method = "pearson")
+cor.test(dcm$Qs, dcm$PRES, method = "pearson")
 
 # now using DCM as the compensation depth due to lack of better method
 
 # mean and median Qs at the DCM
 print(mean(dcm$Qs_DCM))
 print(median(dcm$Qs_DCM))
+# standard error
+std.error(dcm$Qs_DCM)
 
 # histogram
 ggplot(dcm, aes(x = Qs_DCM)) + theme_bw() +
@@ -225,24 +228,73 @@ plot_grid(g7, g8, ncol = 1,
 #### stats ####
 
 # correlation
-cor(dcm$Qs, dcm$PRES, method = "pearson")
+cor.test(dcm$Qs, dcm$PRES, method = "pearson")
 
 # correlation by region
-cor(NAST$Qs, NAST$PRES, method = "pearson")
-cor(SAST$Qs, SAST$PRES, method = "pearson")
-cor(NASP$Qs, NASP$PRES, method = "pearson")
+cor.test(NAST$Qs, NAST$PRES, method = "pearson")
+cor.test(SAST$Qs, SAST$PRES, method = "pearson")
+cor.test(NASP$Qs, NASP$PRES, method = "pearson")
 # only 17 observations in NASP and no correlation found
 # stronger in the north Atlantic than in the south Atlantic
 
 # test correlation for different seasons
-cor(Winter_subset$Qs, Winter_subset$PRES, method = "pearson")
-cor(Spring_subset$Qs, Spring_subset$PRES, method = "pearson")
-cor(Summer_subset$Qs, Summer_subset$PRES, method = "pearson")
-cor(Autumn_subset$Qs, Autumn_subset$PRES, method = "pearson")
+cor.test(Winter_subset$Qs, Winter_subset$PRES, method = "pearson")
+cor.test(Spring_subset$Qs, Spring_subset$PRES, method = "pearson")
+cor.test(Summer_subset$Qs, Summer_subset$PRES, method = "pearson")
+cor.test(Autumn_subset$Qs, Autumn_subset$PRES, method = "pearson")
 # strongest correlation is in autumn
 
-# remove winter (no correlation) and do correlation test again
-noWinter <- dcm %>%
-  filter(!(Season == "Winter"))
-cor(noWinter$maxPAR, noWinter$PRES, method = "pearson")
+# do correlation without subpolar
+cor.test(subtropic$maxPAR, subtropic$PRES, method = "pearson")
 
+# hypothesis testing
+
+# the dcm is deeper in summer and shallower in winter
+# analysis of variance:
+anova_season <- aov(PRES ~ Season, data = dcm)
+summary(anova_season)
+
+# two sample t-tests for seasons
+t.test(Winter_subset$PRES, Spring_subset$PRES, var.equal = TRUE)
+t.test(Winter_subset$PRES, Summer_subset$PRES, var.equal = TRUE)
+t.test(Winter_subset$PRES, Autumn_subset$PRES, var.equal = TRUE)
+
+t.test(Spring_subset$PRES, Summer_subset$PRES, var.equal = TRUE)
+t.test(Spring_subset$PRES, Autumn_subset$PRES, var.equal = TRUE)
+
+t.test(Summer_subset$PRES, Autumn_subset$PRES, var.equal = TRUE)
+
+# two sample t-test for regions
+t.test(NAST$PRES, SAST$PRES, var.equal = TRUE)
+
+# data frame for each region for each season
+NAST_win <- NAST %>%
+  filter(Season == "Winter")
+NAST_spr <- NAST %>%
+  filter(Season == "Spring")
+NAST_sum <- NAST %>%
+  filter(Season == "Summer")
+NAST_aut <- NAST %>%
+  filter(Season == "Autumn")
+
+SAST_win <- SAST %>%
+  filter(Season == "Winter")
+SAST_spr <- SAST %>%
+  filter(Season == "Spring")
+SAST_sum <- SAST %>%
+  filter(Season == "Summer")
+SAST_aut <- SAST %>%
+  filter(Season == "Autumn")
+
+# more t-tests
+t.test(NAST_win$PRES, SAST_win$PRES, var.equal = TRUE)
+t.test(NAST_spr$PRES, SAST_spr$PRES, var.equal = TRUE)
+t.test(NAST_sum$PRES, SAST_sum$PRES, var.equal = TRUE)
+t.test(NAST_aut$PRES, SAST_aut$PRES, var.equal = TRUE)
+
+# t-test for difference between spring/summer and autumn/winter
+springsum <- dcm %>%
+  filter(Season == "Spring" | Season == "Summer")
+autwin <- dcm %>%
+  filter(Season == "Autumn" | Season == "Winter")
+t.test(springsum$PRES, autwin$PRES, var.equal = TRUE)
