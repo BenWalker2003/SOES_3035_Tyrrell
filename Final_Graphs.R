@@ -1,4 +1,4 @@
-setwd("~/Holly/University/Year 3/Oceanography Research Training/Group Project")
+setwd("~/Holly/University/Year 3/Oceanography Research Training/Group Project/Code and Data")
 
 library(tidyr)
 library(dplyr)
@@ -7,8 +7,9 @@ library(lubridate)
 library(aspace)
 library(cowplot)
 library(plotrix)
+library(ggpubr)
 
-load("cloud_data_dcm.RData")
+load("FINAL.RData")
 
 #### daily integrated irradiance (Qs) ####
 
@@ -57,10 +58,13 @@ std.error(dcm$Qs_DCM)
 
 # histogram
 ggplot(dcm, aes(x = Qs_DCM)) + theme_bw() +
-  geom_histogram(binwidth = 0.05, colour = "white", fill = "#476F84") +
+  geom_histogram(breaks = seq(0, 1.5, by = 0.06), 
+                 colour = "white", fill = "#476F84") +
   geom_vline(aes(xintercept = median(Qs_DCM, na.rm = TRUE)), color = "black", 
-             linetype = "dashed", size = 1) +
+             linetype = "dashed", linewidth = 1) +
   xlab("DCM Irradiance / mol photons" ~ m^-2 ~ d^-1) + ylab("Count") +
+  scale_y_continuous(limits = c(0, 150),
+                     breaks = c(0, 50, 100, 150)) +
   theme(axis.text = element_text(size=11),
         axis.title = element_text(size=13))
 
@@ -131,6 +135,7 @@ NASP <- dcm %>%
 dcm$Season <- factor(dcm$Season , levels=c("Winter", "Spring", "Summer", "Autumn"))
 NAST$Season <- factor(NAST$Season , levels=c("Winter", "Spring", "Summer", "Autumn"))
 SAST$Season <- factor(SAST$Season , levels=c("Winter", "Spring", "Summer", "Autumn"))
+NASP$Season <- factor(NASP$Season , levels=c("Winter", "Spring", "Summer", "Autumn"))
 
 # surface PAR and depth of DCM
 g1 <- ggplot(data = dcm, aes(Qs, PRES)) + theme_bw() + geom_point() +
@@ -139,10 +144,14 @@ g1 <- ggplot(data = dcm, aes(Qs, PRES)) + theme_bw() + geom_point() +
   scale_y_continuous(breaks = c(50, 75, 100, 125, 150, 175))
 g1 + theme(axis.text = element_text(size=11),
            axis.title = element_text(size=13))
+# linear regression
+lmDepth <- lm(PRES ~ Qs, data = dcm)
+summary(lmDepth)
 
 # graph with season shown by colour
 g2 <- ggplot(data = dcm, aes(Qs, PRES, colour = Season, shape = Season)) +
   theme_bw() + geom_point() +
+  geom_smooth(method = "lm", aes(group = 1), colour = "black") +
   scale_colour_manual(values = c("#476F84", "#A4BED5", "#72874E", "#FED789")) +
   scale_shape_manual(values=c(18, 16, 17, 15)) +
   xlab("Surface PAR / mol photons" ~ m^-2 ~ d^-1) + ylab("DCM Depth / m") +
@@ -150,7 +159,22 @@ g2 <- ggplot(data = dcm, aes(Qs, PRES, colour = Season, shape = Season)) +
 g2 + theme(axis.text = element_text(size=11),
            axis.title = element_text(size=13),
            legend.text = element_text(size=11),
-           legend.title = element_text(size=13))
+           legend.title = element_text(size=13),
+           legend.position = c(.1,.8))
+
+# graph with region shown by colour
+g2.5 <- ggplot(data = dcm, aes(Qs, PRES, colour = Region, shape = Region)) +
+  theme_bw() + geom_point() +
+  geom_smooth(method = "lm", aes(group = 1), colour = "black") +
+  scale_colour_manual(values = c("#476F84", "#72874E", "#FED789")) +
+  scale_shape_manual(values=c(17, 16, 15)) +
+  xlab("Surface PAR / mol photons" ~ m^-2 ~ d^-1) + ylab("DCM Depth / m") +
+  scale_y_continuous(breaks = c(50, 75, 100, 125, 150, 175))
+g2.5 + theme(axis.text = element_text(size=11),
+           axis.title = element_text(size=13),
+           legend.text = element_text(size=11),
+           legend.title = element_text(size=13),
+           legend.position = c(.1,.8))
 
 # DCM depth by season box plot
 g3 <- ggplot(dcm, aes(x = Season, y = PRES, fill = Season)) + geom_boxplot() +
@@ -160,13 +184,13 @@ g3 + theme(axis.text = element_text(size=11),
            axis.title = element_text(size=13),
            legend.position = "none")
 
-# only 17 profiles in the subpolar gyre, so remove them
+# only 12 profiles in the subpolar gyre, remove them to look at subtropical
 subtropic <- dcm %>%
   filter(!(Region == "NASP"))
 
 # DCM depth by season and region
 g4 <- ggplot(subtropic, aes(x = Season, y = PRES, fill = Region)) + geom_boxplot() +
-  scale_fill_manual(values = c("#476F84", "#A4BED5")) +
+  scale_fill_manual(values = c("#72874E", "#FED789")) +
   theme_bw() + scale_y_reverse() + ylab("DCM Depth / m")
 g4 + theme(axis.text = element_text(size=11),
            axis.title = element_text(size=13),
@@ -178,14 +202,27 @@ g4 + theme(axis.text = element_text(size=11),
 # one for each subtropical gyre with season in colour
 g5 <- ggplot(data = NAST, aes(Qs, PRES, colour = Season, shape = Season)) +
   theme_bw() + geom_point() +
+  geom_smooth(method = "lm", aes(group = 1), colour = "black") +
   scale_colour_manual(values = c("#476F84", "#A4BED5", "#72874E", "#FED789")) +
   scale_shape_manual(values=c(18, 16, 17, 15)) +
   xlab("Surface PAR / mol photons" ~ m^-2 ~ d^-1) + ylab("DCM Depth / m") +
   theme(axis.text = element_text(size=11),
         axis.title = element_text(size=13),
         legend.text = element_text(size=11),
-        legend.title = element_text(size=13))
+        legend.title = element_text(size=13),
+        legend.position = c(.9, .2)) +
+  scale_x_continuous(limits = c(12, 80), expand = c(0,0)) +
+  scale_y_continuous(breaks = c(60, 100, 140, 180))
 g5
+
+g5.5 <- ggplot(data = NAST, aes(Qs, PRES)) +
+  theme_bw() + geom_point() + geom_smooth(method = "lm") +
+  xlab("Surface PAR / mol photons" ~ m^-2 ~ d^-1) + ylab("DCM Depth / m") +
+  theme(axis.text = element_text(size=11),
+        axis.title = element_text(size=13)) +
+  scale_x_continuous(limits = c(12, 80), expand = c(0,0)) +
+  scale_y_continuous(breaks = c(60, 100, 140, 180))
+g5.5
 
 g6 <- ggplot(data = SAST, aes(Qs, PRES, colour = Season, shape = Season)) +
   theme_bw() + geom_point() +
@@ -195,24 +232,25 @@ g6 <- ggplot(data = SAST, aes(Qs, PRES, colour = Season, shape = Season)) +
   theme(axis.text = element_text(size=11),
         axis.title = element_text(size=13),
         legend.text = element_text(size=11),
-        legend.title = element_text(size=13))
+        legend.title = element_text(size=13), 
+        legend.position = c(.9, .2))
 g6
 
 # multi-panel plot to compare NASTG and SASTG
-g7 <- g5 + scale_y_continuous(limits = c(50, 180), 
+g7 <- g5 + scale_y_continuous(limits = c(50, 186), 
                         breaks = c(50, 75, 100, 125, 150, 175),
                         expand = expansion(mult = c(0, 0))) +
-  scale_x_continuous(limits =c(5, 95),
+  scale_x_continuous(limits =c(12, 83),
                      breaks = c(20, 40, 60, 80),
                      expand = expansion(mult = c(0, 0))) +
-  theme(legend.position = c(.85,.25),
+  theme(legend.position = c(.9,.25),
         axis.text.x = element_blank(), axis.title.x = element_blank())
 g7
 
-g8 <- g6 + scale_y_continuous(limits = c(50, 180), 
+g8 <- g6 + scale_y_continuous(limits = c(50, 186), 
                               breaks = c(50, 75, 100, 125, 150, 175),
                               expand = expansion(mult = c(0, 0))) +
-  scale_x_continuous(limits =c(5, 95),
+  scale_x_continuous(limits =c(12, 83),
                      breaks = c(20, 40, 60, 80),
                      expand = expansion(mult = c(0, 0))) +
   theme(legend.position = "none") 
@@ -221,7 +259,7 @@ g8
 plot_grid(g7, g8, ncol = 1,
           rel_heights = c(1, 1.14),
           labels = c("A", "B"),
-          label_x = c(0.11, 0.11),
+          label_x = c(0.1, 0.1),
           label_y = c(0.97, 0.97),
           label_size = 14)
 
@@ -234,7 +272,7 @@ cor.test(dcm$Qs, dcm$PRES, method = "pearson")
 cor.test(NAST$Qs, NAST$PRES, method = "pearson")
 cor.test(SAST$Qs, SAST$PRES, method = "pearson")
 cor.test(NASP$Qs, NASP$PRES, method = "pearson")
-# only 17 observations in NASP and no correlation found
+# only 12 observations in NASP so not worth doing
 # stronger in the north Atlantic than in the south Atlantic
 
 # test correlation for different seasons
@@ -253,6 +291,14 @@ cor.test(subtropic$maxPAR, subtropic$PRES, method = "pearson")
 # analysis of variance:
 anova_season <- aov(PRES ~ Season, data = dcm)
 summary(anova_season)
+
+anova_region <- aov(PRES ~ Region, data = dcm)
+summary(anova_region)
+
+# two sample t-tests for regions
+t.test(NASP$PRES, NAST$PRES, var.equal = TRUE)
+t.test(NASP$PRES, SAST$PRES, var.equal = TRUE)
+t.test(NAST$PRES, SAST$PRES, var.equal = TRUE)
 
 # two sample t-tests for seasons
 t.test(Winter_subset$PRES, Spring_subset$PRES, var.equal = TRUE)
@@ -298,3 +344,15 @@ springsum <- dcm %>%
 autwin <- dcm %>%
   filter(Season == "Autumn" | Season == "Winter")
 t.test(springsum$PRES, autwin$PRES, var.equal = TRUE)
+
+# mean and median PAR at DCM: variation by region
+mean(NAST$Qs_DCM)
+std.error(NAST$Qs_DCM)
+median(NAST$Qs_DCM)
+
+mean(SAST$Qs_DCM)
+std.error(SAST$Qs_DCM)
+median(SAST$Qs_DCM)
+
+# t-test
+t.test(NAST$Qs_DCM, SAST$Qs_DCM, var.equal = TRUE)
