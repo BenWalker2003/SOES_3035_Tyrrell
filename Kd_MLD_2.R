@@ -1,5 +1,5 @@
 #############################################################################
-# MIXED LAYER DEPTH Kd + Clear-sky PAR Filtering + Spiking Filtering 50% FILTER + Bathymetry
+# MIXED LAYER DEPTH Kd + Clear-sky PAR Filtering + Spiking Filtering NO FILTER + Bathymetry
 #############################################################################
 
 # Libraries
