@@ -9,7 +9,7 @@ library(cowplot)
 library(plotrix)
 library(ggpubr)
 
-load("FINAL.RData")
+load("FINAL_DCM.RData")
 
 #### daily integrated irradiance (Qs) ####
 
