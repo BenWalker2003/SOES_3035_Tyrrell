@@ -640,10 +640,6 @@ num_unique_profiles <- length(unique(profile_summary$profile_number))
 cat("Unique profile_number:", num_unique_profiles, "\n")
 
 
-time_range <-NAG %>%
-  summarise(start_time = min(new_time, na.rm = TRUE),
-            end_time = max(new_time, na.rm = TRUE))
-time_range
 
 
 
